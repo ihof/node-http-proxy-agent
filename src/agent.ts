@@ -31,6 +31,7 @@ function isHTTPS(protocol?: string | null): boolean {
 export default class HttpProxyAgent extends Agent {
 	private secureProxy: boolean;
 	private proxy: HttpProxyAgentOptions;
+	public timeout: number | null;
 
 	constructor(_opts: string | HttpProxyAgentOptions) {
 		let opts: HttpProxyAgentOptions;
@@ -46,6 +47,8 @@ export default class HttpProxyAgent extends Agent {
 		}
 		debug('Creating new HttpProxyAgent instance: %o', opts);
 		super(opts);
+
+		this.timeout = opts.timeout || null;
 
 		const proxy: HttpProxyAgentOptions = { ...opts };
 
@@ -125,6 +128,14 @@ export default class HttpProxyAgent extends Agent {
 		} else {
 			debug('Creating `net.Socket`: %o', proxy);
 			socket = net.connect(proxy as net.NetConnectOpts);
+		}
+
+		if (this.timeout) {
+			socket.setTimeout(this.timeout);
+
+			socket.on('timeout', () => {
+				socket.end();
+			});
 		}
 
 		// At this point, the http ClientRequest's internal `_header` field
